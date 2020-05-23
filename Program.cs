@@ -1,168 +1,204 @@
-using System;
-using System.IO;
+﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Gauss
+namespace Gaussian_elimination
 {
     class Program
     {
-        static void Main()
+        static void Main(string[] args)
         {
-            string matrix_path = @".../.../matrix2.txt";            
-            int n;
-            StreamReader sr = new StreamReader(matrix_path, System.Text.Encoding.Default);
-            n = Convert.ToInt32(sr.ReadLine());
-                                    
-            double[,] A = new double[n, n];
+            string path = @"...\...\matrix1.txt";
+            FileStream streamToRead = new FileStream(path, FileMode.Open);
+            StreamReader reader = new StreamReader(streamToRead);
 
-            //Зчитування матриці            
-            for (int i = 0; i < n; i++)
+            int size = Convert.ToInt32(reader.ReadLine());
+            double[,] matrix = new double[size, size + 1];
+
+            for (int rows = 0; rows < size; rows++)
             {
-                string[] line = sr.ReadLine().Split();
-                for (int j = 0; j < n; j++)
+                string[] array = reader.ReadLine().Split(' ');
+                for (int cols = 0; cols < size + 1; cols++)
                 {
-                    A[i, j] = Convert.ToInt32(line[j]);
+                    matrix[rows, cols] = Convert.ToDouble(array[cols]);
                 }
             }
 
-            //Зчитування розв'язків
-            double[] B = new double[n];
-            string[] solutions_line = sr.ReadLine().Split();
-            for (int i = 0; i < n; i++)
-            {
-                B[i] = Convert.ToInt32(solutions_line[i]);
-            }
-            
-            double[] result = GaussMethod(A, B, n);
-            
-            Console.WriteLine("Розв'язки СЛАР:");           
+            streamToRead.Close();
 
-            for (int j = 0; j < result.Length; j++)
-            {
-                Console.WriteLine($"X{j + 1} = {result[j]}");                                                               
-            }
-            
-            Console.WriteLine($"\nДетермiнант матрицi: {Determinant(A)}");            
+            Console.WriteLine("determinant: ");
+            Console.WriteLine(CalculateDeterminant(matrix, size));
+            Console.WriteLine();
 
-            Console.ReadLine();
+            DisplayMatrix(matrix, size - 1);
+
+            List<double> result = new List<double>();
+            GaussianElimination(ref matrix, size - 1, ref result);
+
+
+
+            FileStream streamToWrite = new FileStream(path, FileMode.Append);
+            StreamWriter writer = new StreamWriter(streamToWrite);
+
+
+
+            writer.WriteLine("xVector : ");
+            foreach (double x in result)
+            {
+                Console.WriteLine(x);
+                writer.WriteLine($"{x}, ");
+            }
+            Console.ReadKey();
+
         }
 
-        static double[] GaussMethod(double[,] A, double[] B, int n)
+        static void GaussianElimination(ref double[,] matrix, int size, ref List<double> result)
         {
 
-            //зведення до трикутного вигляду
-            for (int i = 0; i < n - 1; i++)
+            for (int cols = 0; cols < size; cols++)
             {
-                for (int k = i + 1; k < n; k++)
+                SwapRows(ref matrix, size, FindMaxIndex(matrix, size, cols), cols);
+
+                for (int rows = cols; rows < size; rows++)
                 {
-                    double c = A[i, i] / Math.Sqrt(A[i, i] * A[i, i] + A[k, i]);
-                    double s = A[k, i] / Math.Sqrt(A[i, i] * A[i, i] + A[k, i]);
-                    for (int j = 0; j < n; j++)
+                    if (matrix[rows + 1, cols] == 0)
                     {
-                        double a1 = A[i, j];
-                        double a2 = A[k, j];
-                        A[i, j] = c * a1 + s * a2;
-                        A[k, j] = -s * a1 + c * a2;
+                        continue;
                     }
-                    double b1 = B[i];
-                    double b2 = B[k];
-                    B[i] = c * b1 + s * b2;
-                    B[k] = -s * b1 + c * b2;
-                }
-            }
-            //вивід трикутної матриці
-            /*Console.Write("\nThe matrix is : \n"); 
-           for (int i = 0; i < n; i++)
-           {
-               Console.Write("\n");
-               for (int j = 0; j < 3; j++)
-                   Console.Write("{0}\t", A[i, j]);
-           }
-           Console.Write("\n");
-           for (int i = 0; i < n; i++)
-           {
-               Console.WriteLine("{0}\t", B[i]);
-           }*/
+                    double mult = matrix[cols, cols] / matrix[rows + 1, cols];
 
-            //знаходження фінальних розв'язків
-            for (int i = n - 1; i >= 0; i--)
-            {
-                for (int j = i + 1; j < n; j++)
-                {
-                    B[i] -= i != j ? A[i, j] * B[j] : 0;
-                }
-                B[i] = B[i] / A[i, i];
-            }
-            return B;
-        }
-
-        //Визначення знаку елемента
-        static int SignOfElement(int i, int j)
-        {
-            if ((i + j) % 2 == 0)
-            {
-                return 1;
-            }
-            else
-            {
-                return -1;
-            }
-        }
-        //Визначення мінора за елементом
-        static double[,] CreateSmallerMatrix(double[,] input, int i, int j)
-        {
-            int order = int.Parse(System.Math.Sqrt(input.Length).ToString());
-            double[,] output = new double[order - 1, order - 1];
-            int x = 0, y = 0;
-            for (int m = 0; m < order; m++, x++)
-            {
-                if (m != i)
-                {
-                    y = 0;
-                    for (int n = 0; n < order; n++)
+                    for (int column = cols; column <= size + 1; column++)
                     {
-                        if (n != j)
-                        {
-                            output[x, y] = input[m, n];
-                            y++;
-                        }
+                        matrix[rows + 1, column] = matrix[cols, column] - matrix[rows + 1, column] * mult;
                     }
                 }
-                else
-                {
-                    x--;
-                }
+                DisplayMatrix(matrix, size);
+                Console.WriteLine();
             }
-            return output;
+            double determiner = 1;
+            for (int i = 0; i <= size; i++)
+            {
+                determiner *= matrix[i, i];
+            }
+            result = calculateX(ref matrix, size);
         }
-        //Визначає значення детермінанта за допомогою рекурсії
-        static double Determinant(double[,] input)
+
+        static void GetMatr(double[,] mas, double[,] p, int i, int j, int m)
         {
-            int order = int.Parse(System.Math.Sqrt(input.Length).ToString());
-            if (order > 2)
+            int ki, kj, di, dj;
+            di = 0;
+            for (ki = 0; ki < m - 1; ki++)
             {
-                double value = 0;
-                for (int j = 0; j < order; j++)
+                if (ki == i) di = 1;
+                dj = 0;
+                for (kj = 0; kj < m - 1; kj++)
                 {
-                    double[,] Temp = CreateSmallerMatrix(input, 0, j);
-                    value = value + input[0, j] * (SignOfElement(0, j) * Determinant(Temp));
+                    if (kj == j) dj = 1;
+                    p[ki, kj] = mas[ki + di, kj + dj];
                 }
-                return value;
             }
-            else if (order == 2)
+        }
+        static double CalculateDeterminant(double[,] mas, int m)
+        {
+            int i, j, k, n;
+            double d;
+            double[,] p = new double[m, m];
+            j = 0; d = 0;
+            k = 1;
+            n = m - 1;
+            if (m < 1) Console.WriteLine("The determinant cannot be calculated!");
+            if (m == 1)
             {
-                return ((input[0, 0] * input[1, 1]) - (input[1, 0] * input[0, 1]));
+                d = mas[0, 0];
+                return d;
             }
-            else
+            if (m == 2)
             {
-                return (input[0, 0]);
+                d = mas[0, 0] * mas[1, 1] - (mas[1, 0] * mas[0, 1]);
+                return d;
+            }
+            if (m > 2)
+            {
+                for (i = 0; i < m; i++)
+                {
+                    GetMatr(mas, p, i, 0, m);
+                    d = d + k * mas[i, 0] * CalculateDeterminant(p, n);
+                    k = -k;
+                }
+            }
+            return d;
+        }
+
+        static void DisplayMatrix(double[,] matrix, int size)
+        {
+            for (int i = 0; i <= size; i++)
+            {
+                for (int j = 0; j <= size + 1; j++)
+                {
+                    Console.Write($"{matrix[i, j],3}  ");
+                }
+                Console.WriteLine();
+            }
+            Console.WriteLine();
+        }
+
+        static int FindMaxIndex(double[,] matrix, int size, int col)
+        {
+            int maxIndex = col;
+
+            for (int row = 1; row <= size; row++)                                // =?
+            {
+                if (Math.Abs(matrix[row, col]) > Math.Abs(matrix[maxIndex, col]))
+                {
+                    maxIndex = row;
+                }
+            }
+            return maxIndex;
+        }
+
+        static void SwapRows(ref double[,] matrix, int size, int maxIndex, int row)
+        {
+            for (int cols = 0; cols <= size + 1; cols++)
+            {
+                double temp = matrix[row, cols];
+                matrix[row, cols] = matrix[maxIndex, cols];
+                matrix[maxIndex, cols] = temp;
+            }
+            DisplayMatrix(matrix, size);
+        }
+
+        static void MatrixMultiplication(ref double[,] matrix, int size, int col, double multiplier)
+        {
+            for (int rows = 0; rows < size; rows++)                                                              // size = col
+            {
+                matrix[rows, col] *= multiplier;
             }
         }
 
+        static List<double> calculateX(ref double[,] matrix, int size)
+        {
+            DisplayMatrix(matrix, size);
+            List<double> result = new List<double>();
+            double x;
+            x = matrix[size, size + 1] / matrix[size, size];
+            result.Add(x);
+
+            for (int rows = size - 1; rows >= 0; rows--)
+            {
+                MatrixMultiplication(ref matrix, size, rows + 1, x);
+                double fraction = 0;
+                for (int cols = rows + 1; cols <= size; cols++)
+                {
+                    fraction += matrix[rows, cols];
+                }
+                x = (matrix[rows, size + 1] - fraction) / matrix[rows, rows];
+                result.Add(x);
+            }
+            result.Reverse();
+            return result;
+        }
     }
-
 }
-
