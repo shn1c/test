@@ -74,7 +74,7 @@ namespace Gauss
                 }
             }
             //вивід трикутної матриці
-            /*Console.Write("\nThe matrix is : \n"); 
+            Console.Write("\nThe matrix is : \n"); 
            for (int i = 0; i < n; i++)
            {
                Console.Write("\n");
@@ -85,7 +85,7 @@ namespace Gauss
            for (int i = 0; i < n; i++)
            {
                Console.WriteLine("{0}\t", B[i]);
-           }*/
+           }
 
             //знаходження фінальних розв'язків
             for (int i = n - 1; i >= 0; i--)
